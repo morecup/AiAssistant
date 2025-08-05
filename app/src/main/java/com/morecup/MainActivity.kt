@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -17,12 +18,17 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 enum class AppState {
-    STOPPED,
-    WAKEWORD,
-    STT
+    STOPPED,           // 应用停止状态
+    WAKEWORD,          // 唤醒词检测状态
+    LISTENING,         // 语音识别监听状态
+    PROCESSING,        // 语音处理中状态
+    AI_PROCESSING,     // AI请求处理中状态
+    AI_RESPONDING,     // AI响应播放状态
+    TTS_SPEAKING       // TTS朗读状态
 }
 
 class MainActivity : AppCompatActivity() {
+    private val ACCESS_KEY = "Vo9ii0CIafLGsSI3C7LEIbuLdKhxzr+IJrosP6lTNi4EDef4hX17/g=="
     private val defaultKeyword = Porcupine.BuiltInKeyword.COMPUTER
 
     private lateinit var intentTextView: TextView
@@ -62,6 +68,13 @@ class MainActivity : AppCompatActivity() {
         speechRecognizerManager.setSpeechCallback(object : SpeechRecognizerManager.SpeechCallback {
             override fun onResults(results: String) {
                 processSpeechResults(results)
+            }
+
+            override fun onPartialResults(partialResults: String) {
+                runOnUiThread {
+                    intentTextView.setTextColor(Color.DKGRAY)
+                    intentTextView.text = partialResults
+                }
             }
 
             override fun onError(error: Int) {
@@ -122,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                 Handler(Looper.getMainLooper()).postDelayed({
                     try {
                         speechRecognizerManager.startListening()
-                        currentState = AppState.STT
+                        updateState(AppState.LISTENING)
                     } catch (e: Exception) {
                         displayError("启动语音识别失败: ${e.message}")
                         playback(1000)
@@ -155,7 +168,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun playback(milliSeconds: Int) {
         speechRecognizerManager.stopListening()
-        currentState = AppState.WAKEWORD
+        updateState(AppState.WAKEWORD)
 
         mainHandler.postDelayed({
             if (currentState == AppState.WAKEWORD) {
@@ -173,9 +186,10 @@ class MainActivity : AppCompatActivity() {
     private fun stopService() {
         ttsManager.stop()
         speechRecognizerManager.stopListening()
+        speechRecognizerManager.destroy()
 
         intentTextView.text = ""
-        currentState = AppState.STOPPED
+        updateState(AppState.STOPPED)
     }
 
     override fun onRequestPermissionsResult(
@@ -210,6 +224,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun queryAI(query: String) {
+        updateState(AppState.AI_PROCESSING)
+        
         aiAnalysisManager.analyzeText(query, object : AiAnalysisManager.AiAnalysisCallback {
             override fun onStreamText(text: String) {
                 // 更新UI显示AI响应
@@ -220,6 +236,7 @@ class MainActivity : AppCompatActivity() {
                 
                 // 将文本片段传递给TTS进行流式朗读
                 ttsManager.speakStreamText(text)
+                updateState(AppState.AI_RESPONDING)
             }
 
             override fun onSuccess(response: String) {
@@ -229,6 +246,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onStreamComplete() {
                 // 流式响应完成，恢复唤醒词检测
+                updateState(AppState.TTS_SPEAKING)
                 mainHandler.postDelayed({
                     playback(3000)
                 }, 3000)
@@ -255,6 +273,39 @@ class MainActivity : AppCompatActivity() {
             )
             recordButton.isChecked = false
             recordButton.isEnabled = false
+        }
+    }
+    
+    private fun updateState(newState: AppState) {
+        Log.d("MainActivity", "State changed from $currentState to $newState")
+        currentState = newState
+        
+        // 可以在这里添加UI更新逻辑，例如显示当前状态
+        runOnUiThread {
+            // 根据状态更新UI元素
+            when (newState) {
+                AppState.STOPPED -> {
+                    // 停止状态UI更新
+                }
+                AppState.WAKEWORD -> {
+                    // 唤醒词检测状态UI更新
+                }
+                AppState.LISTENING -> {
+                    // 语音识别监听状态UI更新
+                }
+                AppState.PROCESSING -> {
+                    // 语音处理中状态UI更新
+                }
+                AppState.AI_PROCESSING -> {
+                    // AI请求处理中状态UI更新
+                }
+                AppState.AI_RESPONDING -> {
+                    // AI响应播放状态UI更新
+                }
+                AppState.TTS_SPEAKING -> {
+                    // TTS朗读状态UI更新
+                }
+            }
         }
     }
 }
