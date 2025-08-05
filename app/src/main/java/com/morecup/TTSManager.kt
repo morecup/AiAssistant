@@ -20,10 +20,10 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var shouldStopTTS = false
 
     // 句子结束标点符号
-    private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：', '，', '，')
+    private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：')
 
     // 句子最大长度
-    private val maxSentenceLength = 60
+    private val maxSentenceLength = 1000
 
     // 句子超时时间（毫秒）
     private val sentenceTimeout = 1000L
@@ -152,14 +152,35 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         // 1. 遇到句子结束符号
         // 2. 文本长度超过最大长度
         // 3. 超过超时时间且有文本
-        val isCompleteSentence = currentText.isNotEmpty() && sentenceEndings.contains(currentText.last())
-        val isTooLong = currentText.length >= maxSentenceLength
-        val isTimeout = (System.currentTimeMillis() - lastTextReceivedTime) > sentenceTimeout
-
-        if (isCompleteSentence || isTooLong || isTimeout) {
-            ttsQueue.offer(currentText)
-            sentenceBuffer.clear()
-            startTTSIfNeeded()
+        
+        // 查找句子结束符号的位置
+        val lastEndIndex = currentText.indexOfLast { sentenceEndings.contains(it) }
+        
+        // 如果找到了句子结束符号
+        if (lastEndIndex >= 0) {
+            // 提取结束符号前的内容进行朗读
+            val textToSpeak = currentText.substring(0, lastEndIndex + 1).trim()
+            if (textToSpeak.isNotEmpty()) {
+                ttsQueue.offer(textToSpeak)
+                // 保留结束符号后的内容在缓冲区中
+                val remainingText = currentText.substring(lastEndIndex + 1)
+                sentenceBuffer.clear()
+                sentenceBuffer.append(remainingText)
+                startTTSIfNeeded()
+            }
+        } else {
+            // 没有找到结束符号，检查其他条件
+            val isTooLong = currentText.length >= maxSentenceLength
+            val isTimeout = (System.currentTimeMillis() - lastTextReceivedTime) > sentenceTimeout
+            
+            if (isTooLong || isTimeout) {
+                val textToSpeak = currentText.trim()
+                if (textToSpeak.isNotEmpty()) {
+                    ttsQueue.offer(textToSpeak)
+                    sentenceBuffer.clear()
+                    startTTSIfNeeded()
+                }
+            }
         }
     }
 
