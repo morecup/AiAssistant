@@ -7,7 +7,10 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.speech.RecognitionListener
 import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import android.util.Log
 import android.view.View
 import android.widget.TextView
@@ -16,6 +19,10 @@ import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import java.util.*
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 enum class AppState {
     STOPPED,           // 应用停止状态
@@ -24,7 +31,8 @@ enum class AppState {
     PROCESSING,        // 语音处理中状态
     AI_PROCESSING,     // AI请求处理中状态
     AI_RESPONDING,     // AI响应播放状态
-    TTS_SPEAKING       // TTS朗读状态
+    TTS_SPEAKING,      // TTS朗读状态
+    CONTINUOUS_DIALOG  // 连续对话状态
 }
 
 class MainActivity : AppCompatActivity() {
@@ -43,6 +51,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ttsManager: TTSManager
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    
+    // 连续对话相关
+    private var continuousDialogEnabled = true // 是否启用连续对话
+    private var isContinuousDialogMode = false // 是否处于连续对话模式
 
     private fun displayError(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
@@ -110,14 +122,26 @@ class MainActivity : AppCompatActivity() {
             SpeechRecognizer.ERROR_NO_MATCH -> {
                 if (recordButton.isChecked) {
                     displayError("No recognition result matched.")
-                    playback(1000)
+                    if (isContinuousDialogMode) {
+                        // 连续对话模式下，出错后继续等待语音输入
+                        startContinuousListening()
+                    } else {
+                        playback(1000)
+                    }
                 }
                 return
             }
             SpeechRecognizer.ERROR_CLIENT -> return
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> displayError("Recognition service is busy.")
             SpeechRecognizer.ERROR_SERVER -> displayError("Server Error.")
-            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> displayError("No speech input.")
+            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                displayError("No speech input.")
+                if (isContinuousDialogMode) {
+                    // 连续对话模式下，超时后继续等待语音输入
+                    startContinuousListening()
+                }
+                return
+            }
             else -> displayError("Something wrong occurred.")
         }
         stopService()
@@ -146,6 +170,21 @@ class MainActivity : AppCompatActivity() {
             displayError("Failed to initialize wake word detection: ${e.message}")
         }
     }
+    
+    private fun startContinuousListening() {
+        // 在连续对话模式下直接启动语音识别
+        if (continuousDialogEnabled && isContinuousDialogMode) {
+            try {
+                speechRecognizerManager.startListening()
+                updateState(AppState.LISTENING)
+            } catch (e: Exception) {
+                displayError("启动连续语音识别失败: ${e.message}")
+                // 出错时回退到正常模式
+                isContinuousDialogMode = false
+                playback(1000)
+            }
+        }
+    }
 
     override fun onStop() {
         if (recordButton.isChecked) {
@@ -168,25 +207,45 @@ class MainActivity : AppCompatActivity() {
 
     private fun playback(milliSeconds: Int) {
         speechRecognizerManager.stopListening()
-        updateState(AppState.WAKEWORD)
-
-        mainHandler.postDelayed({
-            if (currentState == AppState.WAKEWORD) {
-                try {
-                    startWakeWordDetection()
-                } catch (e: Exception) {
-                    displayError("Failed to start wake word detection.")
+        
+        // 如果启用了连续对话，则进入连续对话模式
+        if (continuousDialogEnabled && currentState != AppState.STOPPED) {
+            isContinuousDialogMode = true
+            updateState(AppState.CONTINUOUS_DIALOG)
+            
+            mainHandler.postDelayed({
+                if (currentState == AppState.CONTINUOUS_DIALOG) {
+                    startContinuousListening()
+                    intentTextView.setTextColor(Color.WHITE)
+                    intentTextView.text = "请说话...（连续对话模式）"
                 }
-                intentTextView.setTextColor(Color.WHITE)
-                intentTextView.text = "Listening for $defaultKeyword ..."
-            }
-        }, milliSeconds.toLong())
+            }, milliSeconds.toLong())
+        } else {
+            // 否则回到唤醒词检测模式
+            isContinuousDialogMode = false
+            updateState(AppState.WAKEWORD)
+            
+            mainHandler.postDelayed({
+                if (currentState == AppState.WAKEWORD) {
+                    try {
+                        startWakeWordDetection()
+                    } catch (e: Exception) {
+                        displayError("Failed to start wake word detection.")
+                    }
+                    intentTextView.setTextColor(Color.WHITE)
+                    intentTextView.text = "Listening for $defaultKeyword ..."
+                }
+            }, milliSeconds.toLong())
+        }
     }
 
     private fun stopService() {
         ttsManager.stop()
         speechRecognizerManager.stopListening()
         speechRecognizerManager.destroy()
+        
+        // 重置连续对话模式
+        isContinuousDialogMode = false
 
         intentTextView.text = ""
         updateState(AppState.STOPPED)
@@ -245,16 +304,20 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onStreamComplete() {
-                // 流式响应完成，恢复唤醒词检测
+                // 流式响应完成，根据模式决定下一步操作
                 updateState(AppState.TTS_SPEAKING)
+                
+                // 在TTS播放完成后，根据是否启用连续对话来决定下一步
                 mainHandler.postDelayed({
-                    playback(3000)
-                }, 3000)
+                    playback(1000) // 短暂延迟后进入下一阶段
+                }, 1000)
             }
 
             override fun onError(error: String) {
                 runOnUiThread {
                     displayError("AI 请求异常: $error")
+                    // 出错时重置连续对话模式
+                    isContinuousDialogMode = false
                     playback(1000)
                 }
             }
@@ -305,7 +368,21 @@ class MainActivity : AppCompatActivity() {
                 AppState.TTS_SPEAKING -> {
                     // TTS朗读状态UI更新
                 }
+                AppState.CONTINUOUS_DIALOG -> {
+                    // 连续对话状态UI更新
+                    intentTextView.text = "连续对话模式..."
+                }
             }
         }
+    }
+    
+    // 公共方法，允许外部控制是否启用连续对话
+    fun setContinuousDialogEnabled(enabled: Boolean) {
+        continuousDialogEnabled = enabled
+    }
+    
+    // 公共方法，检查是否处于连续对话模式
+    fun isContinuousDialogMode(): Boolean {
+        return isContinuousDialogMode
     }
 }
