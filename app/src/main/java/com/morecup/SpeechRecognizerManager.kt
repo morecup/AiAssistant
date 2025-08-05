@@ -36,7 +36,7 @@ class SpeechRecognizerManager(private val context: Context) {
         }
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        speechRecognizer.setRecognitionListener(speechRecognitionListener)
+        speechRecognizer.setRecognitionListener(SpeechListener())
 
         speechRecognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
@@ -89,7 +89,7 @@ class SpeechRecognizerManager(private val context: Context) {
     }
 
     // 内部的RecognitionListener实现
-    private val speechRecognitionListener = object : RecognitionListener {
+    private inner class SpeechListener : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) {
             speechCallback?.onReadyForSpeech()
         }

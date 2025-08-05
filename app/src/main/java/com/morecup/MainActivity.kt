@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize wake word manager
         wakeWordManager = WakeWordManager()
         wakeWordManager.init(applicationContext) {
-            wakeWordManager.start()
+//            wakeWordManager.start()
             onWakeWordDetected()
         }
     }
@@ -150,16 +150,16 @@ class MainActivity : AppCompatActivity() {
         try {
             wakeWordManager.start()
             
-            // 延迟启动语音识别
-            Handler(Looper.getMainLooper()).postDelayed({
-                try {
-                    speechRecognizerManager.startListening()
-                    updateState(AppState.LISTENING)
-                } catch (e: Exception) {
-                    displayError("启动语音识别失败: ${e.message}")
-                    playback(1000)
-                }
-            }, 200)
+//            // 延迟启动语音识别
+//            Handler(Looper.getMainLooper()).postDelayed({
+//                try {
+//                    speechRecognizerManager.startListening()
+//                    updateState(AppState.LISTENING)
+//                } catch (e: Exception) {
+//                    displayError("启动语音识别失败: ${e.message}")
+//                    playback(1000)
+//                }
+//            }, 200)
         } catch (e: Exception) {
             displayError("Failed to start wake word detection: ${e.message}")
         }
@@ -286,7 +286,7 @@ class MainActivity : AppCompatActivity() {
                 // 更新UI显示AI响应
                 runOnUiThread {
                     intentTextView.setTextColor(Color.WHITE)
-                    intentTextView.text = "AI: $text"
+                    intentTextView.append("$text")
                 }
                 
                 // 将文本片段传递给TTS进行流式朗读

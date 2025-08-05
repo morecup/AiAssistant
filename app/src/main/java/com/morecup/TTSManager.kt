@@ -20,13 +20,13 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     // 句子结束标点符号
     private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：')
-    
+
     // 句子最大长度
     private val maxSentenceLength = 40
-    
+
     // 句子超时时间（毫秒）
     private val sentenceTimeout = 500L
-    
+
     // 用于累积句子的缓冲区
     private val sentenceBuffer = StringBuilder()
     private var lastTextReceivedTime: Long = 0
@@ -42,7 +42,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val result = textToSpeech?.setLanguage(Locale.getDefault())
-            
+
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("TTSManager", "Language not supported")
                 isInitialized = false
@@ -50,26 +50,44 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
                 // 设置默认参数
                 textToSpeech?.setPitch(1.0f)
                 textToSpeech?.setSpeechRate(1.1f)
-                
+
                 // 设置中文语音（如果可用）
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    textToSpeech?.voice = Voice(
-                        "zh-CN-language",
-                        Locale.CHINESE,
-                        Voice.QUALITY_HIGH,
-                        Voice.LATENCY_NORMAL,
-                        false,
-                        null
-                    )
+                    // 获取系统中所有可用的语音
+                    val availableVoices = textToSpeech?.voices
+                    Log.d("TTSManager", "Available voices: $availableVoices")
+
+                    // 查找中文语音，优先选择质量高的
+                    val chineseVoice = availableVoices?.find {
+                        (it.locale == Locale.CHINESE || it.locale == Locale.SIMPLIFIED_CHINESE) &&
+                                it.quality == Voice.QUALITY_HIGH
+                    } ?: availableVoices?.find {
+                        it.locale == Locale.CHINESE || it.locale == Locale.SIMPLIFIED_CHINESE
+                    }
+
+                    if (chineseVoice != null) {
+                        textToSpeech?.voice = chineseVoice
+                        Log.d("TTSManager", "Using voice: ${chineseVoice.name}")
+                    } else {
+                        // 如果找不到合适的中文语音，使用默认设置
+                        textToSpeech?.voice = Voice(
+                            "zh-CN-language",
+                            Locale.CHINESE,
+                            Voice.QUALITY_HIGH,
+                            Voice.LATENCY_NORMAL,
+                            false,
+                            null
+                        )
+                    }
                 }
-                
+
                 isInitialized = true
             }
         } else {
             Log.e("TTSManager", "TTS initialization failed")
             isInitialized = false
         }
-        
+
         initListener?.invoke(isInitialized)
         initListener = null
     }
@@ -91,11 +109,11 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         if (queueMode == TextToSpeech.QUEUE_FLUSH) {
             flush()
         }
-        
+
         ttsQueue.offer(text)
         startTTSIfNeeded()
     }
-    
+
     /**
      * 处理流式响应的文本片段
      * 累积文本直到形成完整句子再进行朗读
@@ -105,23 +123,23 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
             Log.e("TTSManager", "TTS not initialized")
             return
         }
-        
+
         synchronized(sentenceBuffer) {
             sentenceBuffer.append(textFragment)
             lastTextReceivedTime = System.currentTimeMillis()
-            
+
             // 检查是否应该朗读句子
             checkAndSpeakSentence()
         }
     }
-    
+
     /**
      * 检查并朗读完整句子
      */
     private fun checkAndSpeakSentence() {
         val currentText = sentenceBuffer.toString()
         if (currentText.isEmpty()) return
-        
+
         // 判断是否应该朗读:
         // 1. 遇到句子结束符号
         // 2. 文本长度超过最大长度
@@ -129,14 +147,14 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         val isCompleteSentence = currentText.any { sentenceEndings.contains(it) }
         val isTooLong = currentText.length >= maxSentenceLength
         val isTimeout = (System.currentTimeMillis() - lastTextReceivedTime) > sentenceTimeout
-        
+
         if (isCompleteSentence || isTooLong || isTimeout) {
             ttsQueue.offer(currentText.trim())
             sentenceBuffer.clear()
             startTTSIfNeeded()
         }
     }
-    
+
     /**
      * 强制朗读当前缓冲区中的所有文本（例如在流结束时）
      */
@@ -149,7 +167,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
             }
         }
     }
-    
+
     private fun startTTSIfNeeded() {
         if (ttsThread?.isAlive != true) {
             shouldStopTTS = false
@@ -158,7 +176,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
             }
         }
     }
-    
+
     private fun processTTSQueue() {
         isSpeaking = true
         try {
@@ -178,7 +196,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
             isSpeaking = false
         }
     }
-    
+
     private fun speakInternal(text: String) {
         textToSpeech?.let { tts ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -189,7 +207,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
             }
         }
     }
-    
+
     private fun waitForSpeechCompletion() {
         while (textToSpeech?.isSpeaking == true && !shouldStopTTS) {
             try {
@@ -209,7 +227,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         textToSpeech?.stop()
         shouldStopTTS = true
     }
-    
+
     private fun flush() {
         synchronized(sentenceBuffer) {
             sentenceBuffer.clear()
@@ -221,7 +239,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     fun isSpeaking(): Boolean {
         return isSpeaking || (textToSpeech?.isSpeaking ?: false)
     }
-    
+
     fun queueSize(): Int {
         return ttsQueue.size
     }
@@ -232,6 +250,26 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     fun setSpeechRate(rate: Float) {
         textToSpeech?.setSpeechRate(rate)
+    }
+
+    /**
+     * 获取所有可用的语音
+     */
+    fun getAvailableVoices(): Set<Voice>? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            textToSpeech?.voices
+        } else {
+            null
+        }
+    }
+
+    /**
+     * 设置特定语音
+     */
+    fun setVoice(voice: Voice) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            textToSpeech?.voice = voice
+        }
     }
 
     fun shutdown() {

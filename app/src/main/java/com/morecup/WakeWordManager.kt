@@ -14,7 +14,7 @@ class WakeWordManager {
     private lateinit var porcupineManager: PorcupineManager
     private var wakeWordCallback: (() -> Unit)? = null
 
-    private val ACCESS_KEY = "Vo9ii0CIafLGsSI3C7LEIbuLdKhxzr+IJrosP6lTNi4EDef4hX17/g=="
+    private val ACCESS_KEY = "dauNLkyx6pZwC222/6zy8WlPPePJ9SufDpmmpigAjSUGmMNDTJTEqw=="
     private val defaultKeyword = Porcupine.BuiltInKeyword.COMPUTER
 
     fun init(applicationContext: Context, callBack: () -> Unit){
