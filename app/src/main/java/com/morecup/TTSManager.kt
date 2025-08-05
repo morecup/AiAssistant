@@ -5,7 +5,7 @@ import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import android.util.Log
-import java.util.*
+import java.util.Locale
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
 
@@ -22,10 +22,10 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：')
 
     // 句子最大长度
-    private val maxSentenceLength = 40
+    private val maxSentenceLength = 60
 
     // 句子超时时间（毫秒）
-    private val sentenceTimeout = 500L
+    private val sentenceTimeout = 1000L
 
     // 用于累积句子的缓冲区
     private val sentenceBuffer = StringBuilder()
@@ -137,19 +137,19 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
      * 检查并朗读完整句子
      */
     private fun checkAndSpeakSentence() {
-        val currentText = sentenceBuffer.toString()
+        val currentText = sentenceBuffer.toString().trim()
         if (currentText.isEmpty()) return
 
         // 判断是否应该朗读:
         // 1. 遇到句子结束符号
         // 2. 文本长度超过最大长度
         // 3. 超过超时时间且有文本
-        val isCompleteSentence = currentText.any { sentenceEndings.contains(it) }
+        val isCompleteSentence = currentText.matches(".*[,，。.？！?!;；:：]$".toRegex())
         val isTooLong = currentText.length >= maxSentenceLength
         val isTimeout = (System.currentTimeMillis() - lastTextReceivedTime) > sentenceTimeout
 
         if (isCompleteSentence || isTooLong || isTimeout) {
-            ttsQueue.offer(currentText.trim())
+            ttsQueue.offer(currentText)
             sentenceBuffer.clear()
             startTTSIfNeeded()
         }
@@ -181,7 +181,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         isSpeaking = true
         try {
             while (!shouldStopTTS) {
-                val text = ttsQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS)
+                val text = ttsQueue.poll()
                 if (text != null && text.isNotEmpty()) {
                     speakInternal(text)
                     waitForSpeechCompletion()
@@ -198,6 +198,11 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     }
 
     private fun speakInternal(text: String) {
+
+        // 播放前停止任何正在播放的语音
+        if (textToSpeech?.isSpeaking ?: false) {
+            textToSpeech?.stop()
+        }
         textToSpeech?.let { tts ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts_utterance")

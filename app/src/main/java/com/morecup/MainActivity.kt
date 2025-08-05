@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
         when (error) {
             SpeechRecognizer.ERROR_AUDIO -> displayError("Error recording audio.")
             SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> displayError("Insufficient permissions.")
-            SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_NETWORK -> displayError("Network Error.")
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_NETWORK,
             SpeechRecognizer.ERROR_NO_MATCH -> {
                 if (recordButton.isChecked) {
                     displayError("No recognition result matched.")
@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
                         // 连续对话模式下，出错后继续等待语音输入
                         startContinuousListening()
                     } else {
-                        playback(1000)
+                        playback(0)
                     }
                 }
                 return
@@ -280,13 +280,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun queryAI(query: String) {
         updateState(AppState.AI_PROCESSING)
+        intentTextView.append("\n")
+        intentTextView.append("AI: ")
         
         aiAnalysisManager.analyzeText(query, object : AiAnalysisManager.AiAnalysisCallback {
             override fun onStreamText(text: String) {
                 // 更新UI显示AI响应
                 runOnUiThread {
                     intentTextView.setTextColor(Color.WHITE)
-                    intentTextView.append("$text")
+                    intentTextView.append(text)
                 }
                 
                 // 将文本片段传递给TTS进行流式朗读
@@ -302,11 +304,27 @@ class MainActivity : AppCompatActivity() {
             override fun onStreamComplete() {
                 // 流式响应完成，根据模式决定下一步操作
                 updateState(AppState.TTS_SPEAKING)
-                
-                // 在TTS播放完成后，根据是否启用连续对话来决定下一步
-                mainHandler.postDelayed({
-                    playback(1000) // 短暂延迟后进入下一阶段
-                }, 1000)
+
+                Thread {
+                    // 等待TTS完成播放
+                    while (ttsManager.isSpeaking()) {
+                        try {
+                            Thread.sleep(100)
+                        } catch (e: InterruptedException) {
+                            Thread.currentThread().interrupt()
+                            break
+                        }
+                    }
+
+                    // TTS播放完成后，切换到下一阶段
+                    runOnUiThread {
+                        playback(1000) // 短暂延迟后进入下一阶段
+                    }
+                }.start()
+//                // 在TTS播放完成后，根据是否启用连续对话来决定下一步
+//                mainHandler.postDelayed({
+//                    playback(1000) // 短暂延迟后进入下一阶段
+//                }, 1000)
             }
 
             override fun onError(error: String) {
