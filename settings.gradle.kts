@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MoreCupAiAssistant"
+rootProject.name = "AiAssistant"
 include(":app")
  

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.morecup.MoreCupAiAssistant"
+    namespace = "com.morecup"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.morecup.MoreCupAiAssistant"
+        applicationId = "com.morecup"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
