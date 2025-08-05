@@ -10,6 +10,7 @@ import android.os.Looper
 import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ToggleButton
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     private val defaultKeyword = Porcupine.BuiltInKeyword.COMPUTER
 
     private lateinit var intentTextView: TextView
+    private lateinit var intentScrollView: ScrollView
     private lateinit var recordButton: ToggleButton
 
     private var currentState: AppState = AppState.STOPPED
@@ -58,6 +60,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         intentTextView = findViewById(R.id.intentView)
+        intentScrollView = findViewById(R.id.intentScrollView)
         recordButton = findViewById(R.id.record_button)
 
         // Initialize managers
@@ -289,6 +292,7 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     intentTextView.setTextColor(Color.WHITE)
                     intentTextView.append(text)
+                    scrollToBottom() // 自动滚动到底部
                 }
                 
                 // 将文本片段传递给TTS进行流式朗读
@@ -400,6 +404,12 @@ class MainActivity : AppCompatActivity() {
         return isContinuousDialogMode
     }
     
+    private fun scrollToBottom() {
+        intentScrollView.post {
+            intentScrollView.fullScroll(ScrollView.FOCUS_DOWN)
+        }
+    }
+
     // 处理唤醒词检测事件
     private fun onWakeWordDetected() {
         runOnUiThread {
