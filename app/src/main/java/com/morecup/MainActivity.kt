@@ -7,10 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.speech.RecognitionListener
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.Voice
 import android.util.Log
 import android.view.View
 import android.widget.TextView
@@ -19,10 +16,6 @@ import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.util.*
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
 enum class AppState {
     STOPPED,           // 应用停止状态
@@ -72,8 +65,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeManagers() {
-        // Initialize wake word manager
-        wakeWordManager = WakeWordManager()
 
         // Initialize speech recognizer manager
         speechRecognizerManager = SpeechRecognizerManager(this)
@@ -103,6 +94,13 @@ class MainActivity : AppCompatActivity() {
             if (!success) {
                 displayError("TTS initialization failed")
             }
+        }
+
+        // Initialize wake word manager
+        wakeWordManager = WakeWordManager()
+        wakeWordManager.init(applicationContext) {
+            wakeWordManager.start()
+            onWakeWordDetected()
         }
     }
 
@@ -150,24 +148,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun startWakeWordDetection() {
         try {
-            wakeWordManager.init(applicationContext) {
-                runOnUiThread {
-                    intentTextView.text = ""
+            wakeWordManager.start()
+            
+            // 延迟启动语音识别
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    speechRecognizerManager.startListening()
+                    updateState(AppState.LISTENING)
+                } catch (e: Exception) {
+                    displayError("启动语音识别失败: ${e.message}")
+                    playback(1000)
                 }
-                
-                // 延迟启动语音识别
-                Handler(Looper.getMainLooper()).postDelayed({
-                    try {
-                        speechRecognizerManager.startListening()
-                        updateState(AppState.LISTENING)
-                    } catch (e: Exception) {
-                        displayError("启动语音识别失败: ${e.message}")
-                        playback(1000)
-                    }
-                }, 200)
-            }
+            }, 200)
         } catch (e: Exception) {
-            displayError("Failed to initialize wake word detection: ${e.message}")
+            displayError("Failed to start wake word detection: ${e.message}")
         }
     }
     
@@ -243,6 +237,7 @@ class MainActivity : AppCompatActivity() {
         ttsManager.stop()
         speechRecognizerManager.stopListening()
         speechRecognizerManager.destroy()
+        wakeWordManager.stop()
         
         // 重置连续对话模式
         isContinuousDialogMode = false
@@ -279,6 +274,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         ttsManager.shutdown()
         speechRecognizerManager.destroy()
+        wakeWordManager.destroy()
         super.onDestroy()
     }
 
@@ -384,5 +380,35 @@ class MainActivity : AppCompatActivity() {
     // 公共方法，检查是否处于连续对话模式
     fun isContinuousDialogMode(): Boolean {
         return isContinuousDialogMode
+    }
+    
+    // 处理唤醒词检测事件
+    private fun onWakeWordDetected() {
+        runOnUiThread {
+            //也许还需要处理这些状态
+//            LISTENING,         // 语音识别监听状态
+//            PROCESSING,        // 语音处理中状态
+            // 如果正在朗读TTS，则打断
+            if (currentState == AppState.TTS_SPEAKING || currentState == AppState.AI_RESPONDING || currentState == AppState.AI_RESPONDING) {
+                aiAnalysisManager.stop()
+                ttsManager.stop()
+                intentTextView.text = "已打断当前朗读"
+            }
+            
+            // 清空当前界面文本
+            intentTextView.text = ""
+            
+            // 重置状态并进入下一轮对话
+            isContinuousDialogMode = false
+            updateState(AppState.WAKEWORD)
+            
+            // 立即开始下一轮对话
+            try {
+                speechRecognizerManager.startListening()
+                updateState(AppState.LISTENING)
+            } catch (e: Exception) {
+                displayError("启动语音识别失败: ${e.message}")
+            }
+        }
     }
 }

@@ -147,4 +147,8 @@ class AiAnalysisManager(
     fun cancelAllRequests() {
         client.dispatcher.cancelAll()
     }
+
+    fun stop(){
+        client.dispatcher.executorService.shutdown()
+    }
 }
