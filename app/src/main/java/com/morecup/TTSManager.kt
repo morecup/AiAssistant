@@ -14,6 +14,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var isInitialized = false
     private var initListener: ((Boolean) -> Unit)? = null
     private var isSpeaking = false
+    private var completionCallback: (() -> Unit)? = null
     private val ttsQueue = LinkedBlockingQueue<String>()
     private var ttsThread: Thread? = null
     private var shouldStopTTS = false
@@ -100,6 +101,13 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
+    /**
+     * 设置TTS完成所有内容播放后的回调
+     */
+    fun setCompletionCallback(callback: () -> Unit) {
+        this.completionCallback = callback
+    }
+
     fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_ADD) {
         if (!isInitialized) {
             Log.e("TTSManager", "TTS not initialized")
@@ -144,7 +152,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         // 1. 遇到句子结束符号
         // 2. 文本长度超过最大长度
         // 3. 超过超时时间且有文本
-        val isCompleteSentence = sentenceEndings.contains(currentText.last())
+        val isCompleteSentence = currentText.isNotEmpty() && sentenceEndings.contains(currentText.last())
         val isTooLong = currentText.length >= maxSentenceLength
         val isTimeout = (System.currentTimeMillis() - lastTextReceivedTime) > sentenceTimeout
 
@@ -190,6 +198,11 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
                     break
                 }
             }
+            
+            // 所有内容播放完成，触发回调
+            if (!shouldStopTTS) {
+                onTTSCompleted()
+            }
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         } finally {
@@ -222,6 +235,13 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
                 break
             }
         }
+    }
+
+    /**
+     * 当TTS完成所有内容播放后调用
+     */
+    private fun onTTSCompleted() {
+        completionCallback?.invoke()
     }
 
     fun stop() {

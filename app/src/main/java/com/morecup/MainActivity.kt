@@ -98,6 +98,12 @@ class MainActivity : AppCompatActivity() {
                 displayError("TTS initialization failed")
             }
         }
+        ttsManager.setCompletionCallback {
+            // TTS播放完成后，切换到下一阶段
+            runOnUiThread {
+                playback(300) // 短暂延迟后进入下一阶段
+            }
+        }
 
         // Initialize wake word manager
         wakeWordManager = WakeWordManager()
@@ -302,29 +308,13 @@ class MainActivity : AppCompatActivity() {
 
             override fun onSuccess(response: String) {
                 // 整个响应完成，刷新TTS缓冲区
-                ttsManager.flushBuffer()
+//                ttsManager.flushBuffer()
             }
 
             override fun onStreamComplete() {
                 // 流式响应完成，根据模式决定下一步操作
                 updateState(AppState.TTS_SPEAKING)
 
-                Thread {
-                    // 等待TTS完成播放
-                    while (ttsManager.isSpeaking()) {
-                        try {
-                            Thread.sleep(100)
-                        } catch (e: InterruptedException) {
-                            Thread.currentThread().interrupt()
-                            break
-                        }
-                    }
-
-                    // TTS播放完成后，切换到下一阶段
-                    runOnUiThread {
-                        playback(1000) // 短暂延迟后进入下一阶段
-                    }
-                }.start()
 //                // 在TTS播放完成后，根据是否启用连续对话来决定下一步
 //                mainHandler.postDelayed({
 //                    playback(1000) // 短暂延迟后进入下一阶段
