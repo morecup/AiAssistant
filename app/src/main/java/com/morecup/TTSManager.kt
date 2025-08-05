@@ -19,7 +19,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var shouldStopTTS = false
 
     // 句子结束标点符号
-    private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：')
+    private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：', '，', '，')
 
     // 句子最大长度
     private val maxSentenceLength = 60
@@ -139,12 +139,12 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private fun checkAndSpeakSentence() {
         val currentText = sentenceBuffer.toString().trim()
         if (currentText.isEmpty()) return
-
+        Log.d("TTSManager", "checkAndSpeakSentence:$currentText")
         // 判断是否应该朗读:
         // 1. 遇到句子结束符号
         // 2. 文本长度超过最大长度
         // 3. 超过超时时间且有文本
-        val isCompleteSentence = currentText.matches(".*[,，。.？！?!;；:：]$".toRegex())
+        val isCompleteSentence = sentenceEndings.contains(currentText.last())
         val isTooLong = currentText.length >= maxSentenceLength
         val isTimeout = (System.currentTimeMillis() - lastTextReceivedTime) > sentenceTimeout
 
