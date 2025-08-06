@@ -245,8 +245,8 @@ class MainActivity : AppCompatActivity() {
     private fun stopService() {
         ttsManager.stop()
         speechRecognizerManager.stopListening()
-        speechRecognizerManager.destroy()
         wakeWordManager.stop()
+        aiAnalysisManager.stop()
         
         // 重置连续对话模式
         isContinuousDialogMode = false
