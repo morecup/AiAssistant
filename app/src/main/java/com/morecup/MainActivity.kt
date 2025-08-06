@@ -17,6 +17,7 @@ import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.morecup.sherpa.KeywordSpotterManager
 
 enum class AppState {
     STOPPED,           // 应用停止状态
@@ -40,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private var currentState: AppState = AppState.STOPPED
 
     // Managers
-    private lateinit var wakeWordManager: WakeWordManager
+    private lateinit var wakeWordManager: IWakeWordManager
     private lateinit var speechRecognizerManager: SpeechRecognizerManager
     private lateinit var aiAnalysisManager: AiAnalysisManager
     private lateinit var ttsManager: TTSManager
@@ -106,7 +107,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Initialize wake word manager
-        wakeWordManager = WakeWordManager()
+//        wakeWordManager = WakeWordManager()
+        wakeWordManager = KeywordSpotterManager(this)
         wakeWordManager.init(applicationContext) {
 //            wakeWordManager.start()
             onWakeWordDetected()
