@@ -10,14 +10,14 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 
-class WakeWordManager {
+class WakeWordManager :IWakeWordManager{
     private lateinit var porcupineManager: PorcupineManager
     private var wakeWordCallback: (() -> Unit)? = null
 
     private val ACCESS_KEY = "dauNLkyx6pZwC222/6zy8WlPPePJ9SufDpmmpigAjSUGmMNDTJTEqw=="
     private val defaultKeyword = Porcupine.BuiltInKeyword.COMPUTER
 
-    fun init(applicationContext: Context, callBack: () -> Unit){
+    override fun init(applicationContext: Context, callBack: () -> Unit){
         wakeWordCallback = callBack
         
         porcupineManager = PorcupineManager.Builder()
@@ -43,24 +43,24 @@ class WakeWordManager {
             Log.e("WakeWordManager", "播放提示音失败", e)
         }
     }
-    
-    fun start() {
+
+    override fun start() {
         try {
             porcupineManager.start()
         } catch (e: Exception) {
             Log.e("WakeWordManager", "启动唤醒词检测失败", e)
         }
     }
-    
-    fun stop() {
+
+    override fun stop() {
         try {
             porcupineManager.stop()
         } catch (e: Exception) {
             Log.e("WakeWordManager", "停止唤醒词检测失败", e)
         }
     }
-    
-    fun destroy() {
+
+    override fun destroy() {
         try {
             porcupineManager.delete()
         } catch (e: Exception) {
