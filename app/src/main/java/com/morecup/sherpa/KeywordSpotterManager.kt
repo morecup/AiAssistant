@@ -12,6 +12,12 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.k2fsa.sherpa.onnx.KeywordSpotter
+import com.k2fsa.sherpa.onnx.KeywordSpotterConfig
+import com.k2fsa.sherpa.onnx.OnlineStream
+import com.k2fsa.sherpa.onnx.getFeatureConfig
+import com.k2fsa.sherpa.onnx.getKeywordsFile
+import com.k2fsa.sherpa.onnx.getKwsModelConfig
 import com.morecup.IWakeWordManager
 import kotlin.concurrent.thread
 
