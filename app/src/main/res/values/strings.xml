@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MoreCupAiAssistant</string>
+    <string name="app_name">AiAssistant</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="footer">Made in Vancouver, Canada by Picovoice</string>
