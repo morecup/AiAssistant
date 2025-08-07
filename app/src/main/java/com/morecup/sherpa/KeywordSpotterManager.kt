@@ -6,8 +6,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -191,6 +193,8 @@ class KeywordSpotterManager(private val context: Activity): IWakeWordManager {
                             // 检测到关键词后重置流
                             kws.reset(stream)
 
+                            playBeepSound()
+
                             // 在主线程回调
                             Handler(Looper.getMainLooper()).post {
                                 wakeWordCallback.invoke()
@@ -201,6 +205,16 @@ class KeywordSpotterManager(private val context: Activity): IWakeWordManager {
             } catch (e: Exception) {
                 Log.e(TAG, "处理音频数据出错", e)
             }
+        }
+    }
+
+    private fun playBeepSound() {
+        try {
+            val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+            toneGenerator.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 150)
+            Handler(Looper.getMainLooper()).postDelayed({ toneGenerator.release() }, 200)
+        } catch (e: Exception) {
+            Log.e("WakeWordManager", "播放提示音失败", e)
         }
     }
 }
