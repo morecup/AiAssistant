@@ -33,7 +33,6 @@ enum class AppState {
 }
 
 class MainActivity : AppCompatActivity() {
-    private val ACCESS_KEY = "Vo9ii0CIafLGsSI3C7LEIbuLdKhxzr+IJrosP6lTNi4EDef4hX17/g=="
     private val defaultKeyword = Porcupine.BuiltInKeyword.COMPUTER
 
     private lateinit var intentTextView: TextView
