@@ -109,8 +109,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Initialize wake word manager
-//        wakeWordManager = WakeWordManager()
-        wakeWordManager = KeywordSpotterManager(this)
+        wakeWordManager = WakeWordManager()
+//        wakeWordManager = KeywordSpotterManager(this)
         wakeWordManager.init(applicationContext) {
 //            wakeWordManager.start()
             onWakeWordDetected()
@@ -156,7 +156,10 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             SpeechRecognizer.ERROR_CLIENT -> return
-            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> displayError("Recognition service is busy.")
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
+                displayError("Recognition service is busy.")
+                return
+            }
             SpeechRecognizer.ERROR_SERVER -> displayError("Server Error.")
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                 displayError("No speech input.")
@@ -433,11 +436,15 @@ class MainActivity : AppCompatActivity() {
 //            LISTENING,         // 语音识别监听状态
 //            PROCESSING,        // 语音处理中状态
             // 如果正在朗读TTS，则打断
-            if (currentState == AppState.TTS_SPEAKING || currentState == AppState.AI_RESPONDING || currentState == AppState.AI_RESPONDING) {
-                aiAnalysisManager.stop()
-                ttsManager.stop()
-                intentTextView.text = "已打断当前朗读"
-            }
+//            if (currentState == AppState.TTS_SPEAKING || currentState == AppState.AI_RESPONDING || currentState == AppState.AI_RESPONDING) {
+//                aiAnalysisManager.stop()
+//                ttsManager.stop()
+//                intentTextView.text = "已打断当前朗读"
+//            }
+
+            ttsManager.stop()
+            speechRecognizerManager.stopListening()
+            aiAnalysisManager.stop()
             
             // 清空当前界面文本
             intentTextView.text = ""
