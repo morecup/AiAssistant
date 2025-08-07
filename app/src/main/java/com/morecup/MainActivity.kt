@@ -116,10 +116,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun processSpeechResults(results: String) {
-        runOnUiThread {
+        mainHandler.postDelayed({
             intentTextView.setTextColor(Color.WHITE)
-            intentTextView.text = "用户: $results"
-        }
+            intentTextView.text = "用户: $results\n"
+        }, 0)
+//        runOnUiThread {
+//            intentTextView.setTextColor(Color.WHITE)
+//            intentTextView.text = "用户: $results"
+//        }
         queryAI(results)
     }
 
@@ -296,12 +300,13 @@ class MainActivity : AppCompatActivity() {
         
         aiAnalysisManager.analyzeText(query, object : AiAnalysisManager.AiAnalysisCallback {
             override fun onStreamText(text: String) {
-                // 更新UI显示AI响应
-                runOnUiThread {
+                mainHandler.postDelayed({
                     intentTextView.setTextColor(Color.WHITE)
+                    intentTextView.append("AI:")
                     intentTextView.append(text)
+                    intentTextView.append("\n")
                     scrollToBottom() // 自动滚动到底部
-                }
+                }, 0)
                 
                 // 将文本片段传递给TTS进行流式朗读
                 ttsManager.speakStreamText(text)
