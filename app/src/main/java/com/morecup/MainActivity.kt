@@ -123,7 +123,6 @@ class MainActivity : AppCompatActivity() {
             continuousDialogEnabled = false
             aiAnalysisManager.stop()
             ttsManager.stop()
-            updateState(AppState.STOPPED)
             playBeepSound()
             playback(1000)
             return
