@@ -172,6 +172,6 @@ class AiAnalysisManager(
     }
 
     fun stop(){
-        client.dispatcher.executorService.shutdown()
+        client.dispatcher.cancelAll()
     }
 }
