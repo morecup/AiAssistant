@@ -4,6 +4,8 @@ import ai.picovoice.porcupine.Porcupine
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -116,6 +118,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun processSpeechResults(results: String) {
+        if (results.contains("退出")&&results.length<5){
+            isContinuousDialogMode = false
+            continuousDialogEnabled = false
+            aiAnalysisManager.stop()
+            ttsManager.stop()
+            updateState(AppState.STOPPED)
+            playBeepSound()
+            playback(1000)
+            return
+        }
         mainHandler.postDelayed({
             intentTextView.setTextColor(Color.WHITE)
             intentTextView.text = "用户: $results\n"
@@ -302,9 +314,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStreamText(text: String) {
                 mainHandler.postDelayed({
                     intentTextView.setTextColor(Color.WHITE)
-                    intentTextView.append("AI:")
                     intentTextView.append(text)
-                    intentTextView.append("\n")
                     scrollToBottom() // 自动滚动到底部
                 }, 0)
                 
@@ -337,6 +347,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun playBeepSound() {
+        try {
+            val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+            toneGenerator.startTone(ToneGenerator.TONE_CDMA_SOFT_ERROR_LITE, 150)
+            Handler(Looper.getMainLooper()).postDelayed({ toneGenerator.release() }, 200)
+        } catch (e: Exception) {
+            Log.e("WakeWordManager", "播放提示音失败", e)
+        }
     }
 
     private fun onPorcupineInitError(errorMessage: String) {
