@@ -20,7 +20,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var shouldStopTTS = false
 
     // 句子结束标点符号
-    private val sentenceEndings = setOf('.', '。', '!', '！', '?', '？', ';', '；', ':', '：')
+    private val sentenceEndings = setOf( '。', '!', '！', '?', '？', ';', '；', ':', '：')
 
     // 句子最大长度
     private val maxSentenceLength = 1000

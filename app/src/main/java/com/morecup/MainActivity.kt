@@ -2,12 +2,17 @@ package com.morecup
 
 import ai.picovoice.porcupine.Porcupine
 import android.Manifest
+import android.content.ComponentName
+import android.content.ServiceConnection
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.speech.SpeechRecognizer
 import android.util.Log
@@ -16,6 +21,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ToggleButton
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -51,12 +57,30 @@ class MainActivity : AppCompatActivity() {
     
     // 连续对话相关
     private var continuousDialogEnabled = true // 是否启用连续对话
-    private var isContinuousDialogMode = false // 是否处于连续对话模式
+    private var isContinuousDialogMode = false
+
+    // 后台服务相关
+    private var backgroundService: BackgroundAssistantService? = null
+    private var isServiceBound = false
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as BackgroundAssistantService.LocalBinder
+            backgroundService = binder.getService()
+            isServiceBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            isServiceBound = false
+            backgroundService = null
+        }
+    }
 
     private fun displayError(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -65,8 +89,13 @@ class MainActivity : AppCompatActivity() {
         intentScrollView = findViewById(R.id.intentScrollView)
         recordButton = findViewById(R.id.record_button)
 
+        // 启动并绑定后台服务
+        val intent = Intent(this, BackgroundAssistantService::class.java)
+        startForegroundService(intent)
+        bindService(intent, serviceConnection, 0)
+
         // Initialize managers
-        initializeManagers()
+//        initializeManagers()
     }
 
     private fun initializeManagers() {
@@ -216,6 +245,17 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
     }
 
+    override fun onDestroy() {
+        if (isServiceBound) {
+            unbindService(serviceConnection)
+            isServiceBound = false
+        }
+        ttsManager.shutdown()
+        speechRecognizerManager.destroy()
+        wakeWordManager.destroy()
+        super.onDestroy()
+    }
+
     private fun hasRecordPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             this,
@@ -297,13 +337,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             stopService()
         }
-    }
-
-    override fun onDestroy() {
-        ttsManager.shutdown()
-        speechRecognizerManager.destroy()
-        wakeWordManager.destroy()
-        super.onDestroy()
     }
 
     private fun queryAI(query: String) {
