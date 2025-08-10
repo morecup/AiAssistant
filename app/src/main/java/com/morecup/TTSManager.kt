@@ -20,7 +20,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
     private var shouldStopTTS = false
 
     // 句子结束标点符号
-    private val sentenceEndings = setOf( '。', '!', '！', '?', '？', ';', '；', ':', '：')
+    private val sentenceEndings = setOf( '。', '!', '！', '?', '？', ';', '；')
 
     // 句子最大长度
     private val maxSentenceLength = 1000
@@ -215,8 +215,24 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
                     speakInternal(text)
                     waitForSpeechCompletion()
                 } else if (ttsQueue.isEmpty()) {
-                    // 队列为空，退出循环
-                    break
+                    // 队列为空，检查缓冲区是否也为空
+                    var shouldExit = false
+                    synchronized(sentenceBuffer) {
+                        // 如果缓冲区也为空，或者超过超时时间，则退出循环
+                        if (sentenceBuffer.isEmpty()) {
+                            shouldExit = true
+                        } else if (System.currentTimeMillis() - lastTextReceivedTime > sentenceTimeout) {
+                            // 缓冲区不为空但超时了，将剩余文本加入队列
+                            ttsQueue.offer(sentenceBuffer.toString().trim())
+                            sentenceBuffer.clear()
+                        }
+                    }
+                    if (shouldExit) {
+                        break
+                    }
+
+                    // 短暂休眠避免过度占用CPU
+                    Thread.sleep(50)
                 }
             }
             
@@ -272,6 +288,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         ttsQueue.clear()
         textToSpeech?.stop()
         shouldStopTTS = true
+        ttsThread?.interrupt()
     }
 
     private fun flush() {
