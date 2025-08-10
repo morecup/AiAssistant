@@ -18,6 +18,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.ToggleButton
 import androidx.core.app.NotificationCompat
+import com.morecup.sherpa.KeywordSpotterManager
 
 class BackgroundAssistantService : Service() {
     private val defaultKeyword = Porcupine.BuiltInKeyword.COMPUTER
@@ -37,7 +38,7 @@ class BackgroundAssistantService : Service() {
     companion object {
         private const val TAG = "BackgroundAssistantService"
         private const val CHANNEL_ID = "AssistantServiceChannel"
-        private const val NOTIFICATION_ID = 123455
+        private const val NOTIFICATION_ID = 345262
     }
 
     // Binder for communication with activity
@@ -159,7 +160,8 @@ class BackgroundAssistantService : Service() {
         }
 
         // Initialize wake word manager
-        wakeWordManager = WakeWordManager()
+        wakeWordManager = KeywordSpotterManager(applicationContext.assets)
+//        wakeWordManager = WakeWordManager()
         wakeWordManager.init(applicationContext) {
             onWakeWordDetected()
         }

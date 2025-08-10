@@ -5,6 +5,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.AssetManager
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -23,7 +24,7 @@ import com.k2fsa.sherpa.onnx.getKwsModelConfig
 import com.morecup.IWakeWordManager
 import kotlin.concurrent.thread
 
-class KeywordSpotterManager(private val context: Activity): IWakeWordManager {
+class KeywordSpotterManager(private val assetManager: AssetManager): IWakeWordManager {
     private lateinit var kws: KeywordSpotter
     private lateinit var stream: OnlineStream
     private var audioRecord: AudioRecord? = null
@@ -62,7 +63,7 @@ class KeywordSpotterManager(private val context: Activity): IWakeWordManager {
             )
 
             kws = KeywordSpotter(
-                assetManager = context.assets,
+                assetManager = assetManager,
                 config = config,
             )
             stream = kws.createStream()
