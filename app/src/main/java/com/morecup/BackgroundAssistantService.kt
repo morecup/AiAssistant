@@ -104,9 +104,19 @@ class BackgroundAssistantService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
 
+        // 根据当前状态设置不同的通知文本
+        val contentText = when (currentState) {
+            AppState.STOPPED -> "服务已停止"
+            AppState.WAKEWORD -> "正在等待唤醒词 \"$defaultKeyword\""
+            AppState.LISTENING -> "正在聆听..."
+            AppState.PROCESSING, AppState.AI_PROCESSING -> "正在处理请求..."
+            AppState.AI_RESPONDING, AppState.TTS_SPEAKING -> "正在回答..."
+            AppState.CONTINUOUS_DIALOG -> "连续对话模式"
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("语音助手")
-            .setContentText("正在后台运行，说 \"$defaultKeyword\" 来唤醒")
+            .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -312,6 +322,10 @@ class BackgroundAssistantService : Service() {
     private fun updateState(newState: AppState) {
         Log.d("BackgroundAssistantService", "State changed from $currentState to $newState")
         currentState = newState
+        
+        // 更新通知以反映新的状态
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, createNotification())
     }
     
     // 处理唤醒词检测事件
