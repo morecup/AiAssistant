@@ -160,7 +160,7 @@ class BackgroundAssistantService : Service() {
         }
 
         // Initialize wake word manager
-        wakeWordManager = KeywordSpotterManager(applicationContext.assets)
+        wakeWordManager = KeywordSpotterManager(applicationContext)
 //        wakeWordManager = WakeWordManager()
         wakeWordManager.init(applicationContext) {
             onWakeWordDetected()

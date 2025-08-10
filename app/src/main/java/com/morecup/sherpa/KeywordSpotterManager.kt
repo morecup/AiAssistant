@@ -24,7 +24,7 @@ import com.k2fsa.sherpa.onnx.getKwsModelConfig
 import com.morecup.IWakeWordManager
 import kotlin.concurrent.thread
 
-class KeywordSpotterManager(private val assetManager: AssetManager): IWakeWordManager {
+class KeywordSpotterManager(private val context: Context): IWakeWordManager {
     private lateinit var kws: KeywordSpotter
     private lateinit var stream: OnlineStream
     private var audioRecord: AudioRecord? = null
@@ -63,7 +63,7 @@ class KeywordSpotterManager(private val assetManager: AssetManager): IWakeWordMa
             )
 
             kws = KeywordSpotter(
-                assetManager = assetManager,
+                assetManager = context.assets,
                 config = config,
             )
             stream = kws.createStream()
@@ -150,7 +150,7 @@ class KeywordSpotterManager(private val assetManager: AssetManager): IWakeWordMa
                     context, Manifest.permission.RECORD_AUDIO
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                ActivityCompat.requestPermissions(context, permissions, 200)
+                ActivityCompat.requestPermissions(context as Activity, permissions, 200)
                 return false
             }
 
