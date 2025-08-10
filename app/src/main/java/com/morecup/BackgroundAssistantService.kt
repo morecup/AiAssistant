@@ -172,6 +172,7 @@ class BackgroundAssistantService : Service() {
             aiAnalysisManager.stop()
             ttsManager.stop()
             playBeepSound(ToneGenerator.TONE_CDMA_SOFT_ERROR_LITE)
+            ttsManager.speak("已退出")
             playback(1000)
             return
         }
