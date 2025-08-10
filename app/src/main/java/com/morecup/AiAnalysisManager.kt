@@ -143,7 +143,7 @@ class AiAnalysisManager(
             requestBody.put("extReportParams", JSONObject.NULL) // 显式声明 null
             requestBody.put("isAtomInput", false)
             requestBody.put("version", "v2")
-            requestBody.put("chatModelId", "deep_seek_v3")
+            requestBody.put("chatModelId", "hunyuan_gpt_175B_0404")
 
             // 需要转义的 JSON 字符串参数
             val extInfo =

@@ -227,6 +227,8 @@ class BackgroundAssistantService : Service() {
         if (continuousDialogEnabled && isContinuousDialogMode) {
             try {
                 playBeepSound(TONE_CDMA_LOW_PBX_SSL)
+                ttsManager.speak("您请说")
+                Thread.sleep(150)
                 speechRecognizerManager.startListening()
                 updateState(AppState.LISTENING)
             } catch (e: Exception) {
@@ -340,6 +342,9 @@ class BackgroundAssistantService : Service() {
         
         // 立即开始下一轮对话
         try {
+            playBeepSound(TONE_CDMA_LOW_PBX_SSL)
+            ttsManager.speak("您请说")
+            Thread.sleep(150)
             speechRecognizerManager.startListening()
             updateState(AppState.LISTENING)
         } catch (e: Exception) {

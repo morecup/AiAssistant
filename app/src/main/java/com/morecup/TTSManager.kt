@@ -108,19 +108,35 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         this.completionCallback = callback
     }
 
-    fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_ADD) {
+    fun speak(text: String) {
         if (!isInitialized) {
             Log.e("TTSManager", "TTS not initialized")
             return
         }
 
-        if (queueMode == TextToSpeech.QUEUE_FLUSH) {
-            flush()
-        }
+        // 临时保存原始的完成回调
+        val originalCallback = completionCallback
 
+        // 临时禁用完成回调
+        completionCallback = null
+
+        // 清空之前的队列
+        flush()
+
+        // 将文本添加到队列
         ttsQueue.offer(text)
+
+        // 启动TTS处理
         startTTSIfNeeded()
+
+        // 等待直到文本播放完成
+        ttsThread?.join()
+
+        // 恢复原始的完成回调
+        completionCallback = originalCallback
     }
+
+
 
     /**
      * 处理流式响应的文本片段
@@ -247,7 +263,7 @@ class TTSManager(private val context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
-    private fun speakInternal(text: String) {
+    fun speakInternal(text: String) {
 
         // 播放前停止任何正在播放的语音
         if (textToSpeech?.isSpeaking ?: false) {
